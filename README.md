@@ -1,4 +1,4 @@
-#🔎💾 VolDump
+# 🔎💾 VolDump
 
 Este script de procesamiento automatizado está diseñado para ejecutar una serie de comandos de análisis forense de memoria utilizando la herramienta Volatility 3 (Versión 2.8.0). El script detecta automáticamente el sistema operativo del volcado de memoria (Windows o Linux) y ejecuta una serie de comandos específicos para cada plataforma. Además, guarda los resultados en archivos de texto organizados en una carpeta de salida.
 
