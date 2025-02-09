@@ -27,7 +27,6 @@ install_volatility() {
         echo "[*] Descargando Volatility 2..."
         git clone https://github.com/volatilityfoundation/volatility.git >/dev/null 2>&1 && echo "[*] Descarga completada"
     fi
-
     if [[ ! -d "volatility3" ]]; then
         echo "[*] Descargando Volatility 3..."
         git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1 && echo "[*] Descarga completada"
@@ -43,8 +42,8 @@ display_banner() {
       \ \/ / _ \| | |  | | | | | '_ ` _ \| '_ \ 
        \  / (_) | | |__| | |_| | | | | | | |_) |
         \/ \___/|_|_____/ \__,_|_| |_| |_| .__/ 
-                                        | |    
-                                        |_|   
+                                         | |    
+                                         |_|   
     ---- By: MARH ------------------------------
 EOF
 }
@@ -58,8 +57,8 @@ choose_volatility_version() {
         echo "====================="
         read -p "Seleccione la versión de Volatility: " choice
         case $choice in
-            1) echo "2"; return ;;
-            2) echo "3"; return ;;
+            1) echo "2"; return ;;  # Retorna "2" para Volatility 2
+            2) echo "3"; return ;;  # Retorna "3" para Volatility 3
             *) echo "[-] Opción no válida, intente de nuevo." ;;
         esac
     done
@@ -74,8 +73,8 @@ choose_analysis_type() {
         echo "=========================================================="
         read -p "Seleccione el tipo de análisis: " choice
         case $choice in
-            1) echo "dump"; return ;;
-            2) echo "live"; return ;;
+            1) echo "dump"; return ;;  # Retorna "dump" para análisis de volcado de memoria
+            2) echo "live"; return ;;  # Retorna "live" para análisis en vivo
             *) echo "[-] Opción no válida, intente de nuevo." ;;
         esac
     done
@@ -83,97 +82,47 @@ choose_analysis_type() {
 
 # Función para obtener la ruta de almacenamiento de evidencias
 get_evidence_path() {
-    current_time=$(date "+%Y%m%d_%H%M%S")
-    main_path="evidencias_$current_time"
-    mkdir -p "$main_path/redes" "$main_path/sistema" "$main_path/usuarios" "$main_path/logs"
-    echo "$main_path"
+    read -p "[+] Ingrese la ruta donde desea guardar las evidencias: " path
+    mkdir -p "$path"
+    echo "$path"
 }
 
-# Función para obtener los comandos disponibles en Volatility 2
-get_volatility2_commands() {
-    commands=("imageinfo" "kdbgscan" "pslist" "pstree" "psscan" "dlllist" "ldrmodules" "filescan" "dumpfiles" "hivelist" "printkey" "hashdump" "netscan" "connections" "sockets" "getsids" "lsa_secrets" "cachedump" "memmap" "vadinfo" "vaddump" "malfind" "apihooks" "ssdt" "idt" "driverirp" "modscan" "devicetree" "cmdline" "handles")
-    echo "${commands[@]}"
+# Función para obtener todos los comandos de Volatility
+get_volatility_commands() {
+    volatility_version=$1
+    if [[ "$volatility_version" == "2" ]]; then
+        volatility_path="./volatility/vol.py"
+    else
+        volatility_path="./volatility3/vol.py"
+    fi
+    
+    $volatility_path --info | awk '/^Plugin Name:/ {print $3}'
 }
 
-# Función para obtener los comandos disponibles en Volatility 3
-get_volatility3_commands() {
-    commands=("windows.info" "windows.kdbgscan" "windows.pslist" "windows.pstree" "windows.psscan" "windows.dlllist" "windows.ldrmodules" "windows.filescan" "windows.dumpfiles" "windows.registry.hivelist" "windows.registry.printkey" "windows.hashdump" "windows.netscan" "windows.connections" "windows.sockets" "windows.getsids" "windows.lsadump" "windows.cachedump" "windows.vadinfo" "windows.memmap" "windows.malfind" "windows.driverscan" "windows.ssdt" "windows.idt" "windows.cmdline" "windows.handles" "windows.modules")
-    echo "${commands[@]}"
-}
-
-# Función para ejecutar los comandos de Volatility 2
-run_volatility2_commands() {
-    analysis_type=$1
-    evidence_path=$2
-    memory_dump_path=$3
-
-    commands=$(get_volatility2_commands)
+# Función para ejecutar comandos de Volatility
+run_volatility_commands() {
+    volatility_version=$1
+    analysis_type=$2
+    evidence_path=$3
+    memory_dump_path=$4
+    
+    if [[ "$volatility_version" == "2" ]]; then
+        vol_cmd="./volatility/vol.py"
+    else
+        vol_cmd="./volatility3/vol.py"
+    fi
+    
+    commands=$(get_volatility_commands "$volatility_version")
     
     for cmd in $commands; do
-        if [[ "$cmd" == "netscan" || "$cmd" == "connections" || "$cmd" == "sockets" ]]; then
-            output_file="$evidence_path/redes/${cmd}.txt"
-        elif [[ "$cmd" == "pslist" || "$cmd" == "pstree" || "$cmd" == "psscan" || "$cmd" == "dlllist" || "$cmd" == "ldrmodules" ]]; then
-            output_file="$evidence_path/sistema/${cmd}.txt"
-        elif [[ "$cmd" == "lsa_secrets" || "$cmd" == "cachedump" || "$cmd" == "getsids" ]]; then
-            output_file="$evidence_path/usuarios/${cmd}.txt"
-        else
-            output_file="$evidence_path/logs/${cmd}.txt"
-        fi
-
-        # Ejecutar el comando de Volatility 2 y guardar el resultado
+        output_file="$evidence_path/${cmd}.txt"
         if [[ "$analysis_type" == "dump" ]]; then
-            ./volatility/vol.py -f "$memory_dump_path" $cmd > "$output_file" 2>/dev/null
+            $vol_cmd -f "$memory_dump_path" $cmd > "$output_file" 2>/dev/null
         else
-            ./volatility/vol.py $cmd > "$output_file" 2>/dev/null
+            $vol_cmd $cmd > "$output_file" 2>/dev/null
         fi
-        
-        # Verificar si el comando se ejecutó correctamente
-        if [[ $? -eq 0 ]]; then
-            echo "[*] Ejecutado: $cmd"
-        else
-            echo "[-] Error al ejecutar: $cmd"
-        fi
-
-        # Pausar entre comandos (3 segundos)
-        sleep 3
-    done
-}
-
-# Función para ejecutar los comandos de Volatility 3
-run_volatility3_commands() {
-    analysis_type=$1
-    evidence_path=$2
-    memory_dump_path=$3
-
-    commands=$(get_volatility3_commands)
-    
-    for cmd in $commands; do
-        if [[ "$cmd" == "windows.netscan" || "$cmd" == "windows.connections" || "$cmd" == "windows.sockets" ]]; then
-            output_file="$evidence_path/redes/${cmd}.txt"
-        elif [[ "$cmd" == "windows.pslist" || "$cmd" == "windows.pstree" || "$cmd" == "windows.psscan" || "$cmd" == "windows.dlllist" || "$cmd" == "windows.ldrmodules" ]]; then
-            output_file="$evidence_path/sistema/${cmd}.txt"
-        elif [[ "$cmd" == "windows.lsadump" || "$cmd" == "windows.cachedump" || "$cmd" == "windows.getsids" ]]; then
-            output_file="$evidence_path/usuarios/${cmd}.txt"
-        else
-            output_file="$evidence_path/logs/${cmd}.txt"
-        fi
-
-        # Ejecutar el comando de Volatility 3 y guardar el resultado
-        if [[ "$analysis_type" == "dump" ]]; then
-            python3 ./volatility3/vol3.py -f "$memory_dump_path" $cmd > "$output_file" 2>/dev/null
-        else
-            python3 ./volatility3/vol3.py $cmd > "$output_file" 2>/dev/null
-        fi
-        
-        # Verificar si el comando se ejecutó correctamente
-        if [[ $? -eq 0 ]]; then
-            echo "[*] Ejecutado: $cmd"
-        else
-            echo "[-] Error al ejecutar: $cmd"
-        fi
-
-        # Pausar entre comandos (3 segundos)
-        sleep 3
+        echo "[*] Ejecutado: $cmd"
+        sleep 1  # Pausa de 1 segundo entre comandos
     done
 }
 
@@ -208,12 +157,8 @@ if [[ "$analysis_type" == "dump" ]]; then
     fi
 fi
 
-# Ejecutar comandos según la versión seleccionada
-if [[ "$volatility_version" == "2" ]]; then
-    run_volatility2_commands "$analysis_type" "$evidence_path" "$memory_dump_path"
-elif [[ "$volatility_version" == "3" ]]; then
-    run_volatility3_commands "$analysis_type" "$evidence_path" "$memory_dump_path"
-fi
+# Ejecutar comandos de Volatility
+run_volatility_commands "$volatility_version" "$analysis_type" "$evidence_path" "$memory_dump_path"
 
 echo "============================================================================"
 echo "=  Análisis completado. Resultados guardados en la carpeta de evidencias.  ="
