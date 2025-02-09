@@ -31,7 +31,7 @@ sudo chmod +x VolDump.sh
 ```
 Ejecutar el script
 ```bash
-./VolDump.sh
+sudo ./VolDump.sh
 ```
 
 ![Insertamos la ruta de la evidencia](img/foto2.png)
