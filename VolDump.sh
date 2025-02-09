@@ -27,6 +27,11 @@ install_volatility() {
         echo "[*] Descargando Volatility 2..."
         git clone https://github.com/volatilityfoundation/volatility.git >/dev/null 2>&1 && echo "[*] Descarga completada"
     fi
+
+    if [[ ! -d "volatility3" ]]; then
+        echo "[*] Descargando Volatility 3..."
+        git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1 && echo "[*] Descarga completada"
+    fi
 }
 
 # Función para mostrar el banner
@@ -38,8 +43,8 @@ display_banner() {
       \ \/ / _ \| | |  | | | | | '_ ` _ \| '_ \ 
        \  / (_) | | |__| | |_| | | | | | | |_) |
         \/ \___/|_|_____/ \__,_|_| |_| |_| .__/ 
-                                         | |    
-                                         |_|   
+                                        | |    
+                                        |_|   
     ---- By: MARH ------------------------------
 EOF
 }
@@ -49,10 +54,12 @@ choose_volatility_version() {
     while true; do
         echo "====================="
         echo "=  1. Volatility 2  ="
+        echo "=  2. Volatility 3  ="
         echo "====================="
-        read -p "Seleccione la versión de Volatility (solo Volatility 2 disponible): " choice
+        read -p "Seleccione la versión de Volatility: " choice
         case $choice in
             1) echo "2"; return ;;
+            2) echo "3"; return ;;
             *) echo "[-] Opción no válida, intente de nuevo." ;;
         esac
     done
@@ -88,6 +95,12 @@ get_volatility2_commands() {
     echo "${commands[@]}"
 }
 
+# Función para obtener los comandos disponibles en Volatility 3
+get_volatility3_commands() {
+    commands=("windows.info" "windows.kdbgscan" "windows.pslist" "windows.pstree" "windows.psscan" "windows.dlllist" "windows.ldrmodules" "windows.filescan" "windows.dumpfiles" "windows.registry.hivelist" "windows.registry.printkey" "windows.hashdump" "windows.netscan" "windows.connections" "windows.sockets" "windows.getsids" "windows.lsadump" "windows.cachedump" "windows.vadinfo" "windows.memmap" "windows.malfind" "windows.driverscan" "windows.ssdt" "windows.idt" "windows.cmdline" "windows.handles" "windows.modules")
+    echo "${commands[@]}"
+}
+
 # Función para ejecutar los comandos de Volatility 2
 run_volatility2_commands() {
     analysis_type=$1
@@ -112,6 +125,44 @@ run_volatility2_commands() {
             ./volatility/vol.py -f "$memory_dump_path" $cmd > "$output_file" 2>/dev/null
         else
             ./volatility/vol.py $cmd > "$output_file" 2>/dev/null
+        fi
+        
+        # Verificar si el comando se ejecutó correctamente
+        if [[ $? -eq 0 ]]; then
+            echo "[*] Ejecutado: $cmd"
+        else
+            echo "[-] Error al ejecutar: $cmd"
+        fi
+
+        # Pausar entre comandos (3 segundos)
+        sleep 3
+    done
+}
+
+# Función para ejecutar los comandos de Volatility 3
+run_volatility3_commands() {
+    analysis_type=$1
+    evidence_path=$2
+    memory_dump_path=$3
+
+    commands=$(get_volatility3_commands)
+    
+    for cmd in $commands; do
+        if [[ "$cmd" == "windows.netscan" || "$cmd" == "windows.connections" || "$cmd" == "windows.sockets" ]]; then
+            output_file="$evidence_path/redes/${cmd}.txt"
+        elif [[ "$cmd" == "windows.pslist" || "$cmd" == "windows.pstree" || "$cmd" == "windows.psscan" || "$cmd" == "windows.dlllist" || "$cmd" == "windows.ldrmodules" ]]; then
+            output_file="$evidence_path/sistema/${cmd}.txt"
+        elif [[ "$cmd" == "windows.lsadump" || "$cmd" == "windows.cachedump" || "$cmd" == "windows.getsids" ]]; then
+            output_file="$evidence_path/usuarios/${cmd}.txt"
+        else
+            output_file="$evidence_path/logs/${cmd}.txt"
+        fi
+
+        # Ejecutar el comando de Volatility 3 y guardar el resultado
+        if [[ "$analysis_type" == "dump" ]]; then
+            python3 ./volatility3/vol3.py -f "$memory_dump_path" $cmd > "$output_file" 2>/dev/null
+        else
+            python3 ./volatility3/vol3.py $cmd > "$output_file" 2>/dev/null
         fi
         
         # Verificar si el comando se ejecutó correctamente
@@ -157,8 +208,12 @@ if [[ "$analysis_type" == "dump" ]]; then
     fi
 fi
 
-# Ejecutar comandos de Volatility 2
-run_volatility2_commands "$analysis_type" "$evidence_path" "$memory_dump_path"
+# Ejecutar comandos según la versión seleccionada
+if [[ "$volatility_version" == "2" ]]; then
+    run_volatility2_commands "$analysis_type" "$evidence_path" "$memory_dump_path"
+elif [[ "$volatility_version" == "3" ]]; then
+    run_volatility3_commands "$analysis_type" "$evidence_path" "$memory_dump_path"
+fi
 
 echo "============================================================================"
 echo "=  Análisis completado. Resultados guardados en la carpeta de evidencias.  ="
