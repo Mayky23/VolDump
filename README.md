@@ -26,7 +26,7 @@ cd VolDump
 ```
 
 ```bash
-python3 forensic_analysis.py
+sudo python3 forensic_analysis.py
 ```
 
 
