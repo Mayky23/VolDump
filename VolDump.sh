@@ -42,7 +42,8 @@ ask_user() {
 
 # Función para mostrar el banner
 display_banner() {
-    echo "
+    cat << "EOF"
+
     __      __   _ _____                        
     \ \    / /  | |  __ \                       
      \ \  / /__ | | |  | |_   _ _ __ ___  _ __  
@@ -52,8 +53,10 @@ display_banner() {
                                         | |    
                                         |_|   
     ---- By: MARH ------------------------------
-    "
+
+EOF
 }
+
 
 # Función para elegir la versión de Volatility
 choose_volatility_version() {
