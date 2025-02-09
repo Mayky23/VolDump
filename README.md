@@ -22,7 +22,7 @@ Este proyecto proporciona una herramienta para realizar análisis forenses de me
 
 ```bash
 git clone https://github.com/Mayky23/VolDump
-cd EviDump
+cd VolDump
 ```
 
 ```bash
