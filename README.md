@@ -20,16 +20,19 @@ Este proyecto proporciona una herramienta para realizar análisis forenses de me
 
 # Como utilizar VolDump
 
+Clonar el repositorio
 ```bash
 git clone https://github.com/Mayky23/VolDump
 cd VolDump
 ```
-
+Dar permisos de ejecución al script
 ```bash
-sudo python3 forensic_analysis.py
+sudo chmod +x VolDump.sh
 ```
-
-
+Ejecutar el script
+```bash
+./VolDump.sh
+```
 
 ![Insertamos la ruta de la evidencia](img/foto2.png)
 
