@@ -57,7 +57,6 @@ display_banner() {
 EOF
 }
 
-
 # Función para elegir la versión de Volatility
 choose_volatility_version() {
     while true; do
@@ -67,8 +66,8 @@ choose_volatility_version() {
         echo "====================="
         read -p "Seleccione la versión de Volatility: " choice
         if [[ "$choice" == "1" || "$choice" == "2" ]]; then
-            echo "$choice"
-            return
+            volatility_version="$choice"
+            break
         fi
         echo "[-] Opción no válida, intente de nuevo."
     done
@@ -83,8 +82,9 @@ choose_analysis_type() {
         echo "=========================================================="
         read -p "Seleccione el tipo de análisis: " choice
         if [[ "$choice" == "1" || "$choice" == "2" ]]; then
-            [[ "$choice" == "1" ]] && echo "dump" || echo "live"
-            return
+            analysis_type="dump"
+            [[ "$choice" == "2" ]] && analysis_type="live"
+            break
         fi
         echo "[-] Opción no válida, intente de nuevo."
     done
@@ -95,8 +95,8 @@ get_memory_dump_path() {
     while true; do
         read -p "[+] Ingrese la ruta del volcado de memoria: " path
         if [[ -f "$path" ]]; then
-            echo "$path"
-            return
+            memory_dump_path="$path"
+            break
         fi
         echo "[-] Archivo no encontrado, intente de nuevo."
     done
@@ -104,12 +104,9 @@ get_memory_dump_path() {
 
 # Función para obtener la ruta donde guardar las evidencias
 get_evidence_path() {
-    while true; do
-        read -p "[+] Ingrese la ruta donde desea guardar las evidencias: " path
-        mkdir -p "$path"
-        echo "$path"
-        return
-    done
+    read -p "[+] Ingrese la ruta donde desea guardar las evidencias: " path
+    mkdir -p "$path"
+    evidence_path="$path"
 }
 
 # Función para crear directorios de evidencias
@@ -120,19 +117,15 @@ create_evidence_directories() {
     mkdir -p "$main_folder"
 
     categories=("Información_General" "Procesos_y_Módulos" "Archivos_y_Registro" "Red_y_Conexiones" "Usuarios_y_Credenciales" "Malware_y_Rootkits" "Otros_Comandos_Útiles")
-    declare -A category_paths
-
     for category in "${categories[@]}"; do
-        category_paths["$category"]="$main_folder/$category"
-        mkdir -p "${category_paths[$category]}"
+        mkdir -p "$main_folder/$category"
     done
 
-    echo "${category_paths[@]}"
+    echo "$main_folder"
 }
 
 # Función para obtener todos los comandos de Volatility
 get_volatility_commands() {
-    volatility_version=$1
     if [[ "$volatility_version" == "2" ]]; then
         volatility_path="./volatility/vol.py"
     else
@@ -146,11 +139,6 @@ get_volatility_commands() {
 
 # Función para ejecutar comandos de Volatility
 run_volatility_commands() {
-    volatility_version=$1
-    analysis_type=$2
-    evidence_path=$3
-    memory_dump_path=$4
-
     if [[ "$volatility_version" == "2" ]]; then
         vol_cmd="./volatility/vol.py"
     else
@@ -158,14 +146,14 @@ run_volatility_commands() {
     fi
 
     # Obtener todos los comandos de Volatility
-    commands=$(get_volatility_commands "$volatility_version")
+    commands=$(get_volatility_commands)
 
     # Crear directorios de evidencias
-    paths=($(create_evidence_directories "$evidence_path"))
+    evidence_folder=$(create_evidence_directories "$evidence_path")
 
     # Ejecutar cada comando y guardar los resultados
     for cmd in $commands; do
-        output_file="$evidence_path/Evidencias_$(date +"%Y%m%d_%H%M%S")/${cmd// /_}.txt"
+        output_file="$evidence_folder/${cmd// /_}.txt"
         if [[ "$analysis_type" == "dump" ]]; then
             $vol_cmd -f "$memory_dump_path" $cmd > "$output_file"
         else
@@ -181,7 +169,7 @@ display_banner
 # Verificar e instalar dependencias
 if ! is_installed "python2" || ! is_installed "python3"; then
     echo "[-] Python 2 o Python 3 no están instalados."
-    if ask_user "¿Desea instalarlos? (s/n): "; then
+    if ask_user "¿Desea instalarlos?"; then
         install_dependencies
     else
         echo "Python 2 y 3 son necesarios para usar esta herramienta."
@@ -192,7 +180,7 @@ fi
 # Instalar Volatility si no está instalado
 if [[ ! -d "volatility" || ! -d "volatility3" ]]; then
     echo "[-] Volatility no está instalado."
-    if ask_user "¿Desea instalarlo? (s/n): "; then
+    if ask_user "¿Desea instalarlo?"; then
         install_volatility
     else
         echo "Volatility es necesario para usar esta herramienta."
@@ -201,22 +189,22 @@ if [[ ! -d "volatility" || ! -d "volatility3" ]]; then
 fi
 
 # Elegir versión de Volatility
-volatility_version=$(choose_volatility_version)
+choose_volatility_version
 
 # Elegir tipo de análisis
-analysis_type=$(choose_analysis_type)
+choose_analysis_type
 
 # Obtener ruta de evidencias
-evidence_path=$(get_evidence_path)
+get_evidence_path
 
 # Obtener ruta del volcado de memoria si es necesario
-memory_dump_path=""
 if [[ "$analysis_type" == "dump" ]]; then
-    memory_dump_path=$(get_memory_dump_path)
+    get_memory_dump_path
 fi
 
 # Ejecutar comandos de Volatility
-run_volatility_commands "$volatility_version" "$analysis_type" "$evidence_path" "$memory_dump_path"
+run_volatility_commands
+
 echo "============================================================================"
 echo "=  Análisis completado. Resultados guardados en la carpeta de evidencias.  ="
 echo "============================================================================"
