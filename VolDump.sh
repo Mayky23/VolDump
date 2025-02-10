@@ -57,15 +57,43 @@ install_volatility() {
     fi
 }
 
-
 # -------------------------------------------------------------------
 # Función para mostrar el banner
 # -------------------------------------------------------------------
 display_banner() {
     echo "=========================================="
     echo " VOLDUMP - Volatility 2 and Volatility 3 "
-    echo "=========================================="       
+    echo "=========================================="
     echo "---- By: MARH ----------------------------"
+}
+
+# -------------------------------------------------------------------
+# Función para verificar si Python 2, Python 3 y Volatility están instalados
+# -------------------------------------------------------------------
+check_installation() {
+    if is_installed "python2"; then
+        echo "[*] Python 2 está instalado."
+    else
+        echo "[-] Python 2 no está instalado."
+    fi
+
+    if is_installed "python3"; then
+        echo "[*] Python 3 está instalado."
+    else
+        echo "[-] Python 3 no está instalado."
+    fi
+
+    if [[ -d "volatility" ]]; then
+        echo "[*] Volatility 2 está instalado."
+    else
+        echo "[-] Volatility 2 no está instalado."
+    fi
+
+    if [[ -d "volatility3" ]]; then
+        echo "[*] Volatility 3 está instalado."
+    else
+        echo "[-] Volatility 3 no está instalado."
+    fi
 }
 
 # -------------------------------------------------------------------
@@ -284,10 +312,13 @@ run_volatility_commands() {
 # -------------------------------------------------------------------
 display_banner
 
-# 1) Preguntamos la versión de Volatility que se desea utilizar
+# 1) Verificamos la instalación de Python y Volatility
+check_installation
+
+# 2) Preguntamos la versión de Volatility que se desea utilizar
 volatility_version=$(choose_volatility_version)
 
-# 2) Verificamos que el Python requerido para esa versión esté instalado
+# 3) Verificamos que el Python requerido para esa versión esté instalado
 if [[ "$volatility_version" == "2" ]]; then
     # Volatility 2 usa Python 2
     if ! is_installed "python2"; then
@@ -316,19 +347,19 @@ else
     fi
 fi
 
-# 3) Ahora que nos aseguramos de tener Python 2 o 3, instalamos Volatility si hace falta
+# 4) Ahora que nos aseguramos de tener Python 2 o 3, instalamos Volatility si hace falta
 install_volatility
 
-# 4) Preguntamos el tipo de análisis
+# 5) Preguntamos el tipo de análisis
 analysis_type=$(choose_analysis_type)
 
-# 5) Obtenemos la ruta donde se guardarán las evidencias
+# 6) Obtenemos la ruta donde se guardarán las evidencias
 evidence_base_path=$(get_evidence_path)
 
-# 6) Creamos la carpeta de evidencias con subcarpetas
+# 7) Creamos la carpeta de evidencias con subcarpetas
 evidence_folder=$(create_evidence_folder "$evidence_base_path")
 
-# 7) Si se eligió analizar un volcado, pedimos la ruta
+# 8) Si se eligió analizar un volcado, pedimos la ruta
 memory_dump_path=""
 if [[ "$analysis_type" == "dump" ]]; then
     read -p "[+] Ingrese la ruta del volcado de memoria (.raw, .mem, etc.): " memory_dump_path
@@ -338,7 +369,7 @@ if [[ "$analysis_type" == "dump" ]]; then
     fi
 fi
 
-# 8) Ejecutamos los comandos de Volatility
+# 9) Ejecutamos los comandos de Volatility
 run_volatility_commands "$volatility_version" "$analysis_type" "$evidence_folder" "$memory_dump_path"
 
 echo "============================================================================"
