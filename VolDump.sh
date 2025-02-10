@@ -46,14 +46,14 @@ install_volatility() {
 # -------------------------------------------------------------------
 display_banner() {
     cat << "EOF"
-    __      __   _ _____                         
-    \ \    / /  | |  __ \                       
-     \ \  / /__ | | |  | |_   _ _ __ ___  _ __  
-      \ \/ / _ \| | |  | | | | | '_ ` _ \| '_ \ 
-       \  / (_) | | |__| | |_| | | | | | | |_) |
-        \/ \___/|_|_____/ \__,_|_| |_| |_| .__/ 
-                                         | |    
-                                         |_|   
+ __      __   _ _____                        
+ \ \    / /  | |  __ \                       
+  \ \  / /__ | | |  | |_   _ _ __ ___  _ __  
+   \ \/ / _ \| | |  | | | | | '_ ` _ \| '_ \ 
+    \  / (_) | | |__| | |_| | | | | | | |_) |
+     \/ \___/|_|_____/ \__,_|_| |_| |_| .__/ 
+                                      | |    
+                                      |_|    
     ---- By: MARH ------------------------------
 EOF
 }
@@ -63,14 +63,10 @@ EOF
 # -------------------------------------------------------------------
 choose_volatility_version() {
     while true; do
-        echo "======================"
-        echo "=  (1) Volatility 2  ="
-        echo "=  (2) Volatility 3  ="
-        echo "======================"
         read -p "[+] Seleccione la versión de Volatility (2/3): " choice
         case $choice in
-            1) echo "2"; return ;;  # Retorna "2" para Volatility 2
-            2) echo "3"; return ;;  # Retorna "3" para Volatility 3
+            2) echo "2"; return ;;  # Retorna "2" para Volatility 2
+            3) echo "3"; return ;;  # Retorna "3" para Volatility 3
             *) echo "[-] Opción no válida, intente de nuevo." ;;
         esac
     done
@@ -81,11 +77,7 @@ choose_volatility_version() {
 # -------------------------------------------------------------------
 choose_analysis_type() {
     while true; do
-        echo "============================================================"
-        echo "=   (1) Analizar un volcado de memoria existente          ="
-        echo "=   (2) Realizar un análisis en vivo del sistema actual   ="
-        echo "============================================================"
-        read -p "[+] Seleccione el tipo de análisis (1/2): " choice
+        read -p "[+] Seleccione el tipo de análisis (1) Volcado de memoria existente (2) Análisis en vivo del sistema actual (1/2): " choice
         case $choice in
             1) echo "dump"; return ;;  # Retorna "dump" para análisis de volcado de memoria
             2) echo "live"; return ;;  # Retorna "live" para análisis en vivo
@@ -187,10 +179,10 @@ run_volatility_commands() {
     #   - Logs      -> filescan, dumpfiles, malfind, memmap, vadinfo, etc.
     # -------------------------------------------------------------------
     declare -A folder_map_vol2=(
-        [pslist]="Proceso"
-        [pstree]="Proceso"
-        [psscan]="Proceso"
-        [handles]="Proceso"
+        [pslist]="Procesos"
+        [pstree]="Procesos"
+        [psscan]="Procesos"
+        [handles]="Procesos"
 
         [netscan]="Red"
         [connections]="Red"
@@ -217,10 +209,10 @@ run_volatility_commands() {
     # Para Volatility 3, debido a que los comandos tienen prefijo "linux."
     # (o "windows."), creamos un mapeo similar pero con esas claves.
     declare -A folder_map_vol3=(
-        ["linux.pslist"]="Proceso"
-        ["linux.pstree"]="Proceso"
-        ["linux.psscan"]="Proceso"
-        ["linux.handles"]="Proceso"
+        ["linux.pslist"]="Procesos"
+        ["linux.pstree"]="Procesos"
+        ["linux.psscan"]="Procesos"
+        ["linux.handles"]="Procesos"
 
         ["linux.netscan"]="Red"
         ["linux.connections"]="Red"
