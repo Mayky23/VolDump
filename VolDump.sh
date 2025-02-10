@@ -9,7 +9,6 @@ is_installed() {
 
 # -------------------------------------------------------------------
 # Función para instalar dependencias en Linux
-# (python2, python3 y paquetes requeridos)
 # -------------------------------------------------------------------
 install_dependencies_linux() {
     echo "[+] Instalando dependencias en Linux..."
@@ -117,9 +116,7 @@ choose_analysis_type() {
     while true; do
         echo ""
         echo "Seleccione el tipo de análisis:"
-        echo "  (1) Volcado de memoria existente"
-        echo "  (2) Análisis en vivo del sistema actual"
-        read -p "[+] Opción (1/2): " choice
+        read -p "[+] Seleccione opción  (1) Volcado de memoria existente (2) Análisis en vivo del sistema actual (1/2): " choice
         case $choice in
             1) echo "dump"; return ;;
             2) echo "live"; return ;;
@@ -149,11 +146,12 @@ create_evidence_folder() {
     date_time=$(date +"%Y%m%d_%H%M%S")
     local evidence_folder="$base_path/Evidencias_$date_time"
 
-    mkdir -p "$evidence_folder/Red"
-    mkdir -p "$evidence_folder/Sistema"
-    mkdir -p "$evidence_folder/Logs"
-    mkdir -p "$evidence_folder/Procesos"
-    mkdir -p "$evidence_folder/Otros"
+    # Crear las carpetas necesarias
+    mkdir -p "$evidence_folder/Red" && echo "Carpeta Red creada"
+    mkdir -p "$evidence_folder/Sistema" && echo "Carpeta Sistema creada"
+    mkdir -p "$evidence_folder/Logs" && echo "Carpeta Logs creada"
+    mkdir -p "$evidence_folder/Procesos" && echo "Carpeta Procesos creada"
+    mkdir -p "$evidence_folder/Otros" && echo "Carpeta Otros creada"
 
     echo "$evidence_folder"
 }
@@ -297,12 +295,19 @@ run_volatility_commands() {
 
         # Ejecutar Volatility (con volcado o en vivo)
         if [[ "$analysis_type" == "dump" ]]; then
-            "$vol_cmd" -f "$memory_dump_path" $cmd > "$output_file" 2>/dev/null
+            output=$("$vol_cmd" -f "$memory_dump_path" $cmd)
         else
-            "$vol_cmd" $cmd > "$output_file" 2>/dev/null
+            output=$("$vol_cmd" $cmd)
         fi
 
-        echo "[*] Ejecutado: $cmd -> Guardado en '$folder/${cmd}.txt'"
+        # Si hay salida, guardamos el archivo
+        if [[ -n "$output" ]]; then
+            echo "$output" > "$output_file"
+            echo "[*] Ejecutado: $cmd -> Guardado en '$folder/${cmd}.txt'"
+        else
+            echo "[!] No se generó salida para el comando $cmd"
+        fi
+
         sleep 1  # Pausa de 1 segundo entre comandos (opcional)
     done
 }
@@ -320,7 +325,6 @@ volatility_version=$(choose_volatility_version)
 
 # 3) Verificamos que el Python requerido para esa versión esté instalado
 if [[ "$volatility_version" == "2" ]]; then
-    # Volatility 2 usa Python 2
     if ! is_installed "python2"; then
         echo "[-] Python 2 no está instalado en el sistema."
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -333,7 +337,6 @@ if [[ "$volatility_version" == "2" ]]; then
         fi
     fi
 else
-    # Volatility 3 usa Python 3
     if ! is_installed "python3"; then
         echo "[-] Python 3 no está instalado en el sistema."
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
