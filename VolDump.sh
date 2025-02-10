@@ -35,17 +35,28 @@ install_volatility() {
     # Volatility 2
     if [[ ! -d "volatility" ]]; then
         echo "[*] Descargando Volatility 2..."
-        git clone https://github.com/volatilityfoundation/volatility.git >/dev/null 2>&1 \
-            && echo "[*] Descarga de Volatility 2 completada."
+        if git clone https://github.com/volatilityfoundation/volatility.git; then
+            echo "[*] Descarga de Volatility 2 completada."
+        else
+            echo "[!] Error al descargar Volatility 2."
+        fi
+    else
+        echo "[*] Volatility 2 ya está descargado."
     fi
 
     # Volatility 3
     if [[ ! -d "volatility3" ]]; then
         echo "[*] Descargando Volatility 3..."
-        git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1 \
-            && echo "[*] Descarga de Volatility 3 completada."
+        if git clone https://github.com/volatilityfoundation/volatility3.git; then
+            echo "[*] Descarga de Volatility 3 completada."
+        else
+            echo "[!] Error al descargar Volatility 3."
+        fi
+    else
+        echo "[*] Volatility 3 ya está descargado."
     fi
 }
+
 
 # -------------------------------------------------------------------
 # Función para mostrar el banner
