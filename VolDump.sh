@@ -45,13 +45,10 @@ install_volatility() {
 # Función para mostrar el banner
 # -------------------------------------------------------------------
 display_banner() {
-    cat << "EOF"
-    Yb    dP  dP"Yb  88     8888b.  88   88 8b    d8 88""Yb 
-     Yb  dP  dP   Yb 88      8I  Yb 88   88 88b  d88 88__dP 
-      YbdP   Yb   dP 88  .o  8I  dY Y8   8P 88YbdP88 88"""  
-       YP     YbodP  88ood8 8888Y"  `YbodP' 88 YY 88 88        
-    ---- By: MARH -----------------------------------------
-EOF
+    echo "=========================================="
+    echo "= VOLDUM - Volatility 2 and Volatility 3 ="
+    echo "=========================================="       
+    echo "---- By: MARH ----------------------------"
 }
 
 # -------------------------------------------------------------------
