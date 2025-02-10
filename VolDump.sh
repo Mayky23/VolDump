@@ -46,7 +46,7 @@ install_volatility() {
 # -------------------------------------------------------------------
 display_banner() {
     echo "=========================================="
-    echo " VOLDUM - Volatility 2 and Volatility 3 "
+    echo " VOLDUMP - Volatility 2 and Volatility 3 "
     echo "=========================================="       
     echo "---- By: MARH ----------------------------"
 }
