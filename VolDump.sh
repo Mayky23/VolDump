@@ -14,7 +14,15 @@ install_dependencies_linux() {
     echo "[+] Instalando dependencias en Linux..."
     sudo apt-get update -qq
     sudo apt-get install -y python3 python3-pip git >/dev/null 2>&1
-    pip3 install volatility3 >/dev/null 2>&1
+    echo "[+] Instalando Volatility 3..."
+    if [[ ! -d "volatility3" ]]; then
+        git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1
+        cd volatility3
+        pip3 install -r requirements.txt >/dev/null 2>&1
+        cd ..
+    else
+        echo "[*] Volatility 3 ya está instalado."
+    fi
 }
 
 # -------------------------------------------------------------------
@@ -23,7 +31,8 @@ install_dependencies_linux() {
 install_dependencies_windows() {
     echo "[!] Por favor, instale manualmente Python 3 desde:"
     echo "    https://www.python.org/downloads/"
-    echo "[!] Luego, instale Volatility 3 con: pip install volatility3"
+    echo "[!] Luego, clone el repositorio de Volatility 3 y ejecute:"
+    echo "    pip install -r requirements.txt"
     exit 1
 }
 
@@ -33,10 +42,13 @@ install_dependencies_windows() {
 display_banner() {
     echo "  __     __    _ ____                        "
     echo "  \ \   / /__ | |  _ \ _   _ _ __ ___  _ __  "
-    echo "   \ \ / / _ \| | | | | | | | '_ \ _ \| _  \ "
+    echo "   \ \ / / _ \| | | | | | | | '_ \` _ \| '_ \ "
     echo "    \ V / (_) | | |_| | |_| | | | | | | |_) |"
     echo "     \_/ \___/|_|____/ \__,_|_| |_| |_| .__/ "
     echo "                                      |_|    "
+    echo "============================================="
+    echo " VOLDUMP - Volatility 3 Memory Analysis      "
+    echo "============================================="
     echo "---- By: MARH -------------------------------"
 }
 
@@ -50,7 +62,7 @@ check_installation() {
         echo "[-] Python 3 no está instalado."
     fi
 
-    if is_installed "vol"; then
+    if [[ -d "volatility3" ]]; then
         echo "[*] Volatility 3 está instalado."
     else
         echo "[-] Volatility 3 no está instalado."
@@ -114,13 +126,13 @@ identify_os() {
     echo "[+] Identificando el sistema operativo..."
 
     if [[ "$analysis_type" == "dump" ]]; then
-        # Usamos el comando 'imageinfo' de Volatility 3 para identificar el sistema operativo
-        os_info=$(vol -f "$memory_dump_path" windows.info 2>/dev/null | grep "OS")
+        # Usamos el comando 'windows.info' de Volatility 3 para identificar el sistema operativo
+        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" windows.info 2>/dev/null | grep "OS")
         if [[ -n "$os_info" ]]; then
             echo "[*] Sistema operativo identificado: Windows"
             echo "windows"
         else
-            os_info=$(vol -f "$memory_dump_path" linux.banner 2>/dev/null)
+            os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" linux.banner 2>/dev/null)
             if [[ -n "$os_info" ]]; then
                 echo "[*] Sistema operativo identificado: Linux"
                 echo "linux"
@@ -254,9 +266,9 @@ run_volatility_commands() {
 
         # Ejecutar Volatility (con volcado o en vivo)
         if [[ "$analysis_type" == "dump" ]]; then
-            output=$(vol -f "$memory_dump_path" $cmd)
+            output=$(python3 volatility3/vol.py -f "$memory_dump_path" $cmd 2>/dev/null)
         else
-            output=$(vol $cmd)
+            output=$(python3 volatility3/vol.py $cmd 2>/dev/null)
         fi
 
         # Si hay salida, guardamos el archivo
@@ -280,7 +292,7 @@ display_banner
 check_installation
 
 # 2) Instalamos dependencias si es necesario
-if ! is_installed "python3" || ! is_installed "vol"; then
+if ! is_installed "python3" || [[ ! -d "volatility3" ]]; then
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         install_dependencies_linux
     elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
