@@ -1,13 +1,13 @@
 # 🔎💾 VolDump
 
-Este proyecto proporciona una herramienta para realizar análisis forenses de memoria utilizando **Volatility 2** y **Volatility 3**. Los comandos de Volatility están organizados en varias categorías y se pueden ejecutar en sistemas Linux y Windows para extraer información crítica de volcado de memoria.
+Este proyecto proporciona una herramienta para realizar análisis forenses de memoria utilizando **Volatility 3**. Los comandos de Volatility están organizados en varias categorías y se pueden ejecutar en sistemas Linux y Windows para extraer información crítica de volcado de memoria.
 
 ![Pantalla principal de la herramienta](img/foto1.png)
 
 ## Funcionalidades
 
-- **Verificación de instalación**: Comprueba si Python 2 y 3, así como Volatility 2 y 3, están instalados en el sistema.
-- **Comandos de Volatility**: Ejecuta una serie de comandos de Volatility 2 y 3 para análisis forenses de memoria.
+- **Verificación de instalación**: Comprueba si Python 3, así como Volatility 3, están instalados en el sistema.
+- **Comandos de Volatility**: Ejecuta una serie de comandos de Volatility 3 para análisis forenses de memoria.
   - Información general
   - Procesos y módulos
   - Archivos y registros

@@ -17,9 +17,14 @@ install_dependencies_linux() {
     echo "[+] Instalando Volatility 3..."
     if [[ ! -d "volatility3" ]]; then
         git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1
-        cd volatility3
-        pip3 install -r requirements.txt >/dev/null 2>&1
-        cd ..
+        if [[ $? -eq 0 ]]; then
+            cd volatility3 || { echo "[-] Error al cambiar al directorio volatility3"; exit 1; }
+            pip3 install -r requirements.txt >/dev/null 2>&1
+            cd ..
+        else
+            echo "[-] Error al clonar Volatility 3."
+            exit 1
+        fi
     else
         echo "[*] Volatility 3 ya está instalado."
     fi
