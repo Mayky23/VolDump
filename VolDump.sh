@@ -20,7 +20,7 @@ install_dependencies_linux() {
         if [[ $? -eq 0 ]]; then
             cd volatility3 || { echo "[-] Error al cambiar al directorio volatility3"; exit 1; }
             pip3 install -r requirements.txt >/dev/null 2>&1
-            cd ..
+            cd .. 
         else
             echo "[-] Error al clonar Volatility 3."
             exit 1
@@ -331,6 +331,6 @@ os_type=$(identify_os "$analysis_type" "$memory_dump_path")
 run_volatility_commands "$analysis_type" "$evidence_folder" "$memory_dump_path" "$os_type"
 
 echo "============================================================================"
-echo "  Análisis completado. Resultados guardados en la carpeta de evidencias:  "
+echo " Análisis completado. Resultados guardados en la carpeta de evidencias:     "
 echo "  $evidence_folder"
 echo "============================================================================"
