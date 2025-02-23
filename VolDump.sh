@@ -51,9 +51,6 @@ display_banner() {
     echo "    \ V / (_) | | |_| | |_| | | | | | | |_) |"
     echo "     \_/ \___/|_|____/ \__,_|_| |_| |_| .__/ "
     echo "                                      |_|    "
-    echo "============================================="
-    echo " VOLDUMP - Volatility 3 Memory Analysis      "
-    echo "============================================="
     echo "---- By: MARH -------------------------------"
 }
 
@@ -271,9 +268,9 @@ run_volatility_commands() {
 
         # Ejecutar Volatility (con volcado o en vivo)
         if [[ "$analysis_type" == "dump" ]]; then
-            output=$(python3 volatility3/vol.py -f "$memory_dump_path" $cmd 2>/dev/null)
+            output=$(python3 volatility3/vol.py -f "$memory_dump_path" "$cmd" 2>/dev/null)
         else
-            output=$(python3 volatility3/vol.py $cmd 2>/dev/null)
+            output=$(python3 volatility3/vol.py "$cmd" 2>/dev/null)
         fi
 
         # Si hay salida, guardamos el archivo
@@ -334,6 +331,6 @@ os_type=$(identify_os "$analysis_type" "$memory_dump_path")
 run_volatility_commands "$analysis_type" "$evidence_folder" "$memory_dump_path" "$os_type"
 
 echo "============================================================================"
-echo "=  Análisis completado. Resultados guardados en la carpeta de evidencias:  ="
-echo "=  $evidence_folder"
+echo "  Análisis completado. Resultados guardados en la carpeta de evidencias:  "
+echo "  $evidence_folder"
 echo "============================================================================"
