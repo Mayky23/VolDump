@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -------------------------------------------------------------------
-# Volatility 3 Automation Script - Updated with Correct Commands
+# Volatility 3 Automation Script - Updated with Symbol Directory Support
 # -------------------------------------------------------------------
 
 # Display Banner
@@ -86,6 +86,7 @@ run_volatility_commands() {
     local evidence_path="$2"
     local memory_dump_path="$3"
     local os_type="$4"
+    local symbols_path="$5"
 
     local commands_windows=("windows.pslist.PsList" "windows.pstree.PsTree" "windows.psscan.PsScan" "windows.filescan.FileScan" "windows.dumpfiles.DumpFiles" "windows.netscan.NetScan" "windows.netstat.NetStat" "windows.handles.Handles" "windows.cmdline.CmdLine" "windows.malfind.Malfind" "windows.vadinfo.VadInfo" "windows.ssdt.SSDT")
 
@@ -109,9 +110,9 @@ run_volatility_commands() {
         echo "[*] Running: $cmd..."
         local output=""
         if [[ "$analysis_type" == "dump" ]]; then
-            output=$(python3 volatility3/vol.py -f "$memory_dump_path" "$cmd" 2>&1)
+            output=$(python3 volatility3/vol.py -f "$memory_dump_path" --symbol-dirs "$symbols_path" "$cmd" 2>&1)
         else
-            output=$(python3 volatility3/vol.py "$cmd" 2>&1)
+            output=$(python3 volatility3/vol.py --symbol-dirs "$symbols_path" "$cmd" 2>&1)
         fi
 
         if [[ -n "$output" ]]; then
@@ -136,16 +137,19 @@ read -p "[+] Enter the evidence folder path (press ENTER for current directory):
 [[ -z "$evidence_base_path" ]] && evidence_base_path="."
 evidence_folder=$(create_evidence_folder "$evidence_base_path")
 
+read -p "[+] Enter the symbols directory path (press ENTER to skip): " symbols_path
+[[ -z "$symbols_path" ]] && symbols_path="volatility3/symbols"
+
 read -p "[+] Select analysis type (1) Memory Dump (2) Live System: " analysis_choice
 case $analysis_choice in
     1)
         read -p "[+] Enter the memory dump path: " memory_dump_path
         os_type=$(identify_os "dump" "$memory_dump_path")
-        run_volatility_commands "dump" "$evidence_folder" "$memory_dump_path" "$os_type"
+        run_volatility_commands "dump" "$evidence_folder" "$memory_dump_path" "$os_type" "$symbols_path"
         ;;
     2)
         os_type=$(identify_os "live")
-        run_volatility_commands "live" "$evidence_folder" "" "$os_type"
+        run_volatility_commands "live" "$evidence_folder" "" "$os_type" "$symbols_path"
         ;;
     *)
         echo "[-] Invalid option."
