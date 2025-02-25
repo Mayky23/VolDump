@@ -35,10 +35,10 @@ install_dependencies_linux() {
 # -------------------------------------------------------------------
 display_banner() {
     echo "  __     __    _ ____                        "
-    echo "  \ \   / /__ | |  _ \ _   _ _ __ ___  _ __  "
-    echo "   \ \ / / _ \| | | | | | | | '_ \` _ \| '_ \ "
-    echo "    \ V / (_) | | |_| | |_| | | | | | | |_) |"
-    echo "     \_/ \___/|_|____/ \__,_|_| |_| |_| .__/ "
+    echo "  \\ \\   / /__ | |  _ \\ _   _ _ __ ___  _ __  "
+    echo "   \\ \\ / / _ \\| | | | | | | | '_ \\` _ \\| '_ \\ "
+    echo "    \\ V / (_) | | |_| | |_| | | | | | | |_) |"
+    echo "     \\_/ \\___/|_|____/ \\__,_|_| |_| |_| .__/ "
     echo "                                      |_|    "
     echo "---- By: MARH -------------------------------"
 }
@@ -95,17 +95,22 @@ identify_os() {
     local analysis_type="$1"
     local memory_dump_path="$2"
     echo "[+] Identificando el sistema operativo..."
+    local os_type=""
+
     if [[ "$analysis_type" == "dump" ]]; then
         os_info=$(python3 -m volatility3.vol -f "$memory_dump_path" windows.info 2>/dev/null | grep "OS")
-        [[ -n "$os_info" ]] && echo "windows" && return
+        [[ -n "$os_info" ]] && os_type="Windows"
 
         os_info=$(python3 -m volatility3.vol -f "$memory_dump_path" linux.banner 2>/dev/null)
-        [[ -n "$os_info" ]] && echo "linux" && return
+        [[ -n "$os_info" ]] && os_type="Linux"
 
-        echo "[-] No se pudo identificar el sistema operativo." && exit 1
+        [[ -z "$os_type" ]] && echo "[-] No se pudo identificar el sistema operativo." && exit 1
     else
-        [[ "$OSTYPE" == "linux-gnu"* ]] && echo "linux" || echo "windows"
+        [[ "$OSTYPE" == "linux-gnu"* ]] && os_type="Linux" || os_type="Windows"
     fi
+
+    echo "[*] SISTEMA OPERATIVO RECONOCIDO: $os_type"
+    echo "$os_type"
 }
 
 # -------------------------------------------------------------------
@@ -142,7 +147,7 @@ run_volatility_commands() {
 
     # Selección de comandos según SO
     local commands_to_run=( )
-    [[ "$os_type" == "windows" ]] && commands_to_run=("${commands_windows[@]}") || commands_to_run=("${commands_linux[@]}")
+    [[ "$os_type" == "Windows" ]] && commands_to_run=("${commands_windows[@]}") || commands_to_run=("${commands_linux[@]}")
 
     # Ejecutar comandos
     cd volatility3 || { echo "[-] Error: No se encuentra la carpeta volatility3"; exit 1; }
@@ -154,9 +159,9 @@ run_volatility_commands() {
         echo "[*] Ejecutando: $cmd..."
         output=""
         if [[ "$analysis_type" == "dump" ]]; then
-            output=$(python3 -m volatility3.vol -f "$memory_dump_path" "$cmd" 2>/dev/null)
+            output=$(python3 -m volatility3.vol -f "$memory_dump_path" "$cmd" 2>&1)
         else
-            output=$(python3 -m volatility3.vol "$cmd" 2>/dev/null)
+            output=$(python3 -m volatility3.vol "$cmd" 2>&1)
         fi
 
         if [[ -n "$output" ]]; then
