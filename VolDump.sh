@@ -19,25 +19,25 @@ is_installed() {
 
 # Install dependencies on Linux
 install_dependencies_linux() {
-    echo "[+] Installing dependencies on Linux..."
+    echo "[+] Instalando dependencias en Linux..."
     sudo apt-get update -qq
     sudo apt-get install -y python3 python3-pip git >/dev/null 2>&1
 
-    echo "[+] Installing Volatility 3..."
+    echo "[+] Instalando Volatility 3..."
     if [[ ! -d "volatility3" ]]; then
         git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1
         cd volatility3 || exit 1
         pip3 install -r requirements.txt >/dev/null 2>&1
         cd ..
     else
-        echo "[*] Volatility 3 is already installed."
+        echo "[*] Volatility 3 ya está instalado."
     fi
 }
 
 # Verify installations
 check_installation() {
-    is_installed "python3" && echo "[*] Python 3 is installed." || echo "[-] Python 3 is not installed."
-    [[ -d "volatility3" ]] && echo "[*] Volatility 3 is installed." || echo "[-] Volatility 3 is not installed."
+    is_installed "python3" && echo "[*] Python 3 está instalado." || echo "[-] Python 3 no está instalado."
+    [[ -d "volatility3" ]] && echo "[*] Volatility 3 está instalado." || echo "[-] Volatility 3 no está instalado."
 }
 
 # Create evidence folders
@@ -68,14 +68,14 @@ identify_os() {
         [[ -n "$os_info" ]] && os_type="Linux"
 
         if [[ -z "$os_type" ]]; then
-            echo "[!] Unable to detect the OS. Please verify the dump file."
+            echo "[!] No se pudo detectar el sistema operativo. Revise el archivo de las evidencias."
             exit 1
         fi
     else
         [[ "$OSTYPE" == "linux-gnu"* ]] && os_type="Linux" || os_type="Windows"
     fi
 
-    echo "[*] TARGET OPERATING SYSTEM DETECTED: $os_type"
+    echo "[*] SISTEMA OPERATIVO OBJETIVO DETECTADO: $os_type"
     echo "$os_type"
 }
 
@@ -105,7 +105,7 @@ run_volatility_commands() {
         local folder=${folder_map[$cmd_short]:-Other}
         local output_file="$evidence_path/$folder/${cmd_short}.txt"
 
-        echo "[*] Running: $cmd..."
+        echo "[*] Ejecutando: $cmd..."
         local output=""
         if [[ "$analysis_type" == "dump" ]]; then
             output=$(python3 -m volatility3.vol -f "$memory_dump_path" "$cmd" 2>&1)
@@ -115,9 +115,9 @@ run_volatility_commands() {
 
         if [[ -n "$output" ]]; then
             echo "$output" > "$output_file"
-            echo "[+] Saved at '$output_file'"
+            echo "[+] Guardado en '$output_file'"
         else
-            echo "[!] No output for $cmd"
+            echo "[!] No hay resultado para $cmd"
         fi
     done
     cd ..
@@ -132,14 +132,14 @@ fi
 
 check_installation
 
-read -p "[+] Enter the evidence folder path (press ENTER for current directory): " evidence_base_path
+read -p "[+] Inserte la ruta de las evidencias (Pulsa ENTER para usar el directorio actual): " evidence_base_path
 [[ -z "$evidence_base_path" ]] && evidence_base_path="."
 evidence_folder=$(create_evidence_folder "$evidence_base_path")
 
-read -p "[+] Select analysis type (1) Memory Dump (2) Live System: " analysis_choice
+read -p "[+] Selecciona el tipo de análisis (1) Archivo de Dumpeo (2) Sistema Operativo Actual: " analysis_choice
 case $analysis_choice in
     1)
-        read -p "[+] Enter the memory dump path: " memory_dump_path
+        read -p "[+] Inserte la ruta del volcado de memoria: " memory_dump_path
         os_type=$(identify_os "dump" "$memory_dump_path")
         run_volatility_commands "dump" "$evidence_folder" "$memory_dump_path" "$os_type"
         ;;
@@ -148,12 +148,12 @@ case $analysis_choice in
         run_volatility_commands "live" "$evidence_folder" "" "$os_type"
         ;;
     *)
-        echo "[-] Invalid option."
+        echo "[-] Opción no válida."
         exit 1
         ;;
 esac
 
 echo "============================================================================"
-echo " Analysis completed. Results saved in: "
+echo " Analisis completado. Los resultados se guardarán en:"
 echo "  $evidence_folder"
 echo "============================================================================"
