@@ -1,15 +1,16 @@
 #!/bin/bash
 
 # -------------------------------------------------------------------
-# Volatility 3 Automation Script - Fully Optimized with OS Detection & Banner
+# Volatility 3 Automation Script - Optimized with Correct Execution
 # -------------------------------------------------------------------
 
 # Display Banner
 banner() {
     echo "=========================================="
-    echo "      VOLDUMP                             "
+    echo "   VOLDUMP VOLATILITY 3 AUTOMATION TOOL   "
     echo "=========================================="
-    echo "      By: MARH                           "
+    echo "   By: MARH                               "
+    echo "=========================================="
 }
 
 # Check if a command is installed
@@ -19,25 +20,25 @@ is_installed() {
 
 # Install dependencies on Linux
 install_dependencies_linux() {
-    echo "[+] Instalando dependencias en Linux..."
+    echo "[+] Installing dependencies on Linux..."
     sudo apt-get update -qq
     sudo apt-get install -y python3 python3-pip git >/dev/null 2>&1
 
-    echo "[+] Instalando Volatility 3..."
+    echo "[+] Installing Volatility 3..."
     if [[ ! -d "volatility3" ]]; then
         git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1
         cd volatility3 || exit 1
         pip3 install -r requirements.txt >/dev/null 2>&1
         cd ..
     else
-        echo "[*] Volatility 3 ya está instalado."
+        echo "[*] Volatility 3 is already installed."
     fi
 }
 
 # Verify installations
 check_installation() {
-    is_installed "python3" && echo "[*] Python 3 está instalado." || echo "[-] Python 3 no está instalado."
-    [[ -d "volatility3" ]] && echo "[*] Volatility 3 está instalado." || echo "[-] Volatility 3 no está instalado."
+    is_installed "python3" && echo "[*] Python 3 is installed." || echo "[-] Python 3 is not installed."
+    [[ -d "volatility3" ]] && echo "[*] Volatility 3 is installed." || echo "[-] Volatility 3 is not installed."
 }
 
 # Create evidence folders
@@ -61,21 +62,21 @@ identify_os() {
     echo "[+] Detecting the operating system of the target..."
 
     if [[ "$analysis_type" == "dump" ]]; then
-        os_info=$(python3 -m volatility3.vol -f "$memory_dump_path" windows.info 2>/dev/null | grep "OS")
+        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" windows.info 2>/dev/null | grep "OS")
         [[ -n "$os_info" ]] && os_type="Windows"
 
-        os_info=$(python3 -m volatility3.vol -f "$memory_dump_path" linux.banner 2>/dev/null)
+        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" linux.banner 2>/dev/null)
         [[ -n "$os_info" ]] && os_type="Linux"
 
         if [[ -z "$os_type" ]]; then
-            echo "[!] No se pudo detectar el sistema operativo. Revise el archivo de las evidencias."
+            echo "[!] Unable to detect the OS. Please verify the dump file."
             exit 1
         fi
     else
         [[ "$OSTYPE" == "linux-gnu"* ]] && os_type="Linux" || os_type="Windows"
     fi
 
-    echo "[*] SISTEMA OPERATIVO OBJETIVO DETECTADO: $os_type"
+    echo "[*] TARGET OPERATING SYSTEM DETECTED: $os_type"
     echo "$os_type"
 }
 
@@ -99,28 +100,26 @@ run_volatility_commands() {
     local commands_to_run=( )
     [[ "$os_type" == "Windows" ]] && commands_to_run=("${commands_windows[@]}") || commands_to_run=("${commands_linux[@]}")
 
-    cd volatility3 || exit 1
     for cmd in "${commands_to_run[@]}"; do
         local cmd_short=$(echo $cmd | cut -d. -f2)
         local folder=${folder_map[$cmd_short]:-Other}
         local output_file="$evidence_path/$folder/${cmd_short}.txt"
 
-        echo "[*] Ejecutando: $cmd..."
+        echo "[*] Running: $cmd..."
         local output=""
         if [[ "$analysis_type" == "dump" ]]; then
-            output=$(python3 -m volatility3.vol -f "$memory_dump_path" "$cmd" 2>&1)
+            output=$(python3 volatility3/vol.py -f "$memory_dump_path" "$cmd" 2>&1)
         else
-            output=$(python3 -m volatility3.vol "$cmd" 2>&1)
+            output=$(python3 volatility3/vol.py "$cmd" 2>&1)
         fi
 
         if [[ -n "$output" ]]; then
             echo "$output" > "$output_file"
-            echo "[+] Guardado en '$output_file'"
+            echo "[+] Saved at '$output_file'"
         else
-            echo "[!] No hay resultado para $cmd"
+            echo "[!] No output for $cmd"
         fi
     done
-    cd ..
 }
 
 # Main script
@@ -132,14 +131,14 @@ fi
 
 check_installation
 
-read -p "[+] Inserte la ruta de las evidencias (Pulsa ENTER para usar el directorio actual): " evidence_base_path
+read -p "[+] Enter the evidence folder path (press ENTER for current directory): " evidence_base_path
 [[ -z "$evidence_base_path" ]] && evidence_base_path="."
 evidence_folder=$(create_evidence_folder "$evidence_base_path")
 
-read -p "[+] Selecciona el tipo de análisis (1) Archivo de Dumpeo (2) Sistema Operativo Actual: " analysis_choice
+read -p "[+] Select analysis type (1) Memory Dump (2) Live System: " analysis_choice
 case $analysis_choice in
     1)
-        read -p "[+] Inserte la ruta del volcado de memoria: " memory_dump_path
+        read -p "[+] Enter the memory dump path: " memory_dump_path
         os_type=$(identify_os "dump" "$memory_dump_path")
         run_volatility_commands "dump" "$evidence_folder" "$memory_dump_path" "$os_type"
         ;;
@@ -148,12 +147,12 @@ case $analysis_choice in
         run_volatility_commands "live" "$evidence_folder" "" "$os_type"
         ;;
     *)
-        echo "[-] Opción no válida."
+        echo "[-] Invalid option."
         exit 1
         ;;
 esac
 
 echo "============================================================================"
-echo " Analisis completado. Los resultados se guardarán en:"
+echo " Analysis completed. Results saved in: "
 echo "  $evidence_folder"
 echo "============================================================================"
