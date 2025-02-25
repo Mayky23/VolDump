@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # -------------------------------------------------------------------
-# Volatility 3 Automation Script - Optimized with Correct Execution
+# Volatility 3 Automation Script - Updated with Correct Commands
 # -------------------------------------------------------------------
 
 # Display Banner
 banner() {
     echo "=========================================="
-    echo "   VOLDUMP VOLATILITY 3 AUTOMATION TOOL   "
+    echo "      VOLDUMP - VOLATILITY 3              "
     echo "=========================================="
-    echo "   By: MARH                               "
+    echo "      By: MARH                           "
     echo "=========================================="
 }
 
@@ -62,10 +62,10 @@ identify_os() {
     echo "[+] Detecting the operating system of the target..."
 
     if [[ "$analysis_type" == "dump" ]]; then
-        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" windows.info 2>/dev/null | grep "OS")
+        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" windows.info 2>/dev/null)
         [[ -n "$os_info" ]] && os_type="Windows"
 
-        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" linux.banner 2>/dev/null)
+        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" linux.info 2>/dev/null)
         [[ -n "$os_info" ]] && os_type="Linux"
 
         if [[ -z "$os_type" ]]; then
@@ -87,21 +87,22 @@ run_volatility_commands() {
     local memory_dump_path="$3"
     local os_type="$4"
 
-    local commands_windows=("windows.pslist" "windows.pstree" "windows.psscan" "windows.filescan" "windows.dumpfiles" "windows.hashdump" "windows.netscan" "windows.connections" "windows.cachedump" "windows.vadinfo" "windows.memmap" "windows.malfind" "windows.ssdt" "windows.idt" "windows.cmdline" "windows.handles")
-    local commands_linux=("linux.pslist" "linux.pstree" "linux.psscan" "linux.filescan" "linux.dumpfiles" "linux.bash" "linux.check_syscall" "linux.lsof" "linux.netstat" "linux.proc_maps" "linux.malfind" "linux.mountinfo")
+    local commands_windows=("windows.pslist.PsList" "windows.pstree.PsTree" "windows.psscan.PsScan" "windows.filescan.FileScan" "windows.dumpfiles.DumpFiles" "windows.netscan.NetScan" "windows.netstat.NetStat" "windows.handles.Handles" "windows.cmdline.CmdLine" "windows.malfind.Malfind" "windows.vadinfo.VadInfo" "windows.ssdt.SSDT")
+
+    local commands_linux=("linux.pslist.PsList" "linux.pstree.PsTree" "linux.psscan.PsScan" "linux.lsof.Lsof" "linux.mountinfo.MountInfo" "linux.netstat.Netstat" "linux.bash.Bash" "linux.proc.Maps" "linux.malfind.Malfind")
 
     declare -A folder_map=(
-        [pslist]="Processes" [pstree]="Processes" [psscan]="Processes" [handles]="Processes"
-        [netscan]="Network" [connections]="Network"
-        [hashdump]="System" [cachedump]="System" [ssdt]="System" [idt]="System"
-        [filescan]="Logs" [dumpfiles]="Logs" [malfind]="Logs" [memmap]="Logs" [vadinfo]="Logs" [cmdline]="Logs"
+        [PsList]="Processes" [PsTree]="Processes" [PsScan]="Processes"
+        [NetScan]="Network" [Netstat]="Network"
+        [Handles]="System" [CmdLine]="System" [SSDT]="System"
+        [FileScan]="Logs" [DumpFiles]="Logs" [Malfind]="Logs" [VadInfo]="Logs"
     )
 
     local commands_to_run=( )
     [[ "$os_type" == "Windows" ]] && commands_to_run=("${commands_windows[@]}") || commands_to_run=("${commands_linux[@]}")
 
     for cmd in "${commands_to_run[@]}"; do
-        local cmd_short=$(echo $cmd | cut -d. -f2)
+        local cmd_short=$(echo $cmd | awk -F '.' '{print $NF}')
         local folder=${folder_map[$cmd_short]:-Other}
         local output_file="$evidence_path/$folder/${cmd_short}.txt"
 
