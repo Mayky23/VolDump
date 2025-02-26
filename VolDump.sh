@@ -1,163 +1,194 @@
 #!/bin/bash
 
-# -------------------------------------------------------------------
-# Volatility 3 Automation Script - Updated with Symbol Directory Support
-# -------------------------------------------------------------------
+# Colores para mejorar la interfaz
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # Sin color
 
-# Display Banner
-banner() {
-    echo "=========================================="
-    echo "      VOLDUMP - VOLATILITY 3              "
-    echo "=========================================="
-    echo "      By: MARH                           "
-    echo "=========================================="
+# Banner de la herramienta
+echo -e "${BLUE}"
+echo "============================================="
+echo "          VOLDUMP - VOLATILITY 3             "
+echo "               By: MARDH                     "
+echo "============================================="
+echo -e "${NC}"
+
+# Variables globales
+current_date=$(date +"%Y%m%d_%H%M%S")
+evidence_dir="evidencias_$current_date"
+log_file="$evidence_dir/logs/voldump.log"
+pause_time=2 # Tiempo de espera entre comandos (en segundos)
+
+# Crear estructura de carpetas
+mkdir -p "$evidence_dir"/{memoria,sistema,logs}
+touch "$log_file"
+
+# Función para registrar logs
+log() {
+    echo -e "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$log_file"
 }
 
-# Check if a command is installed
-is_installed() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Install dependencies on Linux
-install_dependencies_linux() {
-    echo "[+] Installing dependencies on Linux..."
-    sudo apt-get update -qq
-    sudo apt-get install -y python3 python3-pip git >/dev/null 2>&1
-
-    echo "[+] Installing Volatility 3..."
-    if [[ ! -d "volatility3" ]]; then
-        git clone https://github.com/volatilityfoundation/volatility3.git >/dev/null 2>&1
-        cd volatility3 || exit 1
-        pip3 install -r requirements.txt >/dev/null 2>&1
-        cd ..
-    else
-        echo "[*] Volatility 3 is already installed."
-    fi
-}
-
-# Verify installations
-check_installation() {
-    is_installed "python3" && echo "[*] Python 3 is installed." || echo "[-] Python 3 is not installed."
-    [[ -d "volatility3" ]] && echo "[*] Volatility 3 is installed." || echo "[-] Volatility 3 is not installed."
-}
-
-# Create evidence folders
-create_evidence_folder() {
-    local base_path="$1"
-    local date_time=$(date +"%Y%m%d_%H%M%S")
-    local evidence_folder="$base_path/Evidences_$date_time"
-
-    for folder in "Network" "System" "Logs" "Processes" "Other"; do
-        mkdir -p "$evidence_folder/$folder" || exit 1
-    done
-    echo "$evidence_folder"
-}
-
-# Identify the operating system of the target
-identify_os() {
-    local analysis_type="$1"
-    local memory_dump_path="$2"
-    local os_type=""
-
-    echo "[+] Detecting the operating system of the target..."
-
-    if [[ "$analysis_type" == "dump" ]]; then
-        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" windows.info 2>/dev/null)
-        [[ -n "$os_info" ]] && os_type="Windows"
-
-        os_info=$(python3 volatility3/vol.py -f "$memory_dump_path" linux.info 2>/dev/null)
-        [[ -n "$os_info" ]] && os_type="Linux"
-
-        if [[ -z "$os_type" ]]; then
-            echo "[!] Unable to detect the OS. Please verify the dump file."
+# Función para verificar dependencias
+verificar_dependencias() {
+    log "Verificando dependencias..."
+    if ! command -v python3 &> /dev/null || [[ $(python3 -c 'import sys; print(sys.version_info >= (3, 8))') == "False" ]]; then
+        log "${RED}Python 3.8 o superior no está instalado. Instalando...${NC}"
+        sudo apt-get update && sudo apt-get install -y python3 python3-pip || {
+            log "${RED}Error: No se pudo instalar Python 3.${NC}"
             exit 1
-        fi
+        }
     else
-        [[ "$OSTYPE" == "linux-gnu"* ]] && os_type="Linux" || os_type="Windows"
+        log "${GREEN}Python 3.8 o superior ya está instalado.${NC}"
     fi
 
-    echo "[*] TARGET OPERATING SYSTEM DETECTED: $os_type"
-    echo "$os_type"
+    if ! command -v volatility &> /dev/null; then
+        log "${YELLOW}Volatility 3 no está instalado. Instalando...${NC}"
+        sudo pip3 install volatility3 || {
+            log "${RED}Error: No se pudo instalar Volatility 3.${NC}"
+            exit 1
+        }
+    else
+        log "${GREEN}Volatility 3 ya está instalado.${NC}"
+    fi
 }
 
-# Run Volatility 3 commands
-run_volatility_commands() {
-    local analysis_type="$1"
-    local evidence_path="$2"
-    local memory_dump_path="$3"
-    local os_type="$4"
-    local symbols_path="$5"
-
-    local commands_windows=("windows.pslist.PsList" "windows.pstree.PsTree" "windows.psscan.PsScan" "windows.filescan.FileScan" "windows.dumpfiles.DumpFiles" "windows.netscan.NetScan" "windows.netstat.NetStat" "windows.handles.Handles" "windows.cmdline.CmdLine" "windows.malfind.Malfind" "windows.vadinfo.VadInfo" "windows.ssdt.SSDT")
-
-    local commands_linux=("linux.pslist.PsList" "linux.pstree.PsTree" "linux.psscan.PsScan" "linux.lsof.Lsof" "linux.mountinfo.MountInfo" "linux.netstat.Netstat" "linux.bash.Bash" "linux.proc.Maps" "linux.malfind.Malfind")
-
-    declare -A folder_map=(
-        [PsList]="Processes" [PsTree]="Processes" [PsScan]="Processes"
-        [NetScan]="Network" [Netstat]="Network"
-        [Handles]="System" [CmdLine]="System" [SSDT]="System"
-        [FileScan]="Logs" [DumpFiles]="Logs" [Malfind]="Logs" [VadInfo]="Logs"
-    )
-
-    local commands_to_run=( )
-    [[ "$os_type" == "Windows" ]] && commands_to_run=("${commands_windows[@]}") || commands_to_run=("${commands_linux[@]}")
-
-    for cmd in "${commands_to_run[@]}"; do
-        local cmd_short=$(echo $cmd | awk -F '.' '{print $NF}')
-        local folder=${folder_map[$cmd_short]:-Other}
-        local output_file="$evidence_path/$folder/${cmd_short}.txt"
-
-        echo "[*] Running: $cmd..."
-        local output=""
-        if [[ "$analysis_type" == "dump" ]]; then
-            output=$(python3 volatility3/vol.py -f "$memory_dump_path" --symbol-dirs "$symbols_path" "$cmd" 2>&1)
-        else
-            output=$(python3 volatility3/vol.py --symbol-dirs "$symbols_path" "$cmd" 2>&1)
-        fi
-
-        if [[ -n "$output" ]]; then
-            echo "$output" > "$output_file"
-            echo "[+] Saved at '$output_file'"
-        else
-            echo "[!] No output for $cmd"
-        fi
-    done
+# Función para detectar el sistema operativo del volcado de memoria
+detectar_sistema_operativo() {
+    local memory_dump="$1"
+    log "Detectando sistema operativo del volcado de memoria..."
+    if volatility -f "$memory_dump" windows.info &> /dev/null; then
+        echo "Windows"
+    elif volatility -f "$memory_dump" linux.info &> /dev/null; then
+        echo "Linux"
+    else
+        echo "Desconocido"
+    fi
 }
 
-# Main script
-banner
-
-if ! is_installed "python3" || [[ ! -d "volatility3" ]]; then
-    install_dependencies_linux
-fi
-
-check_installation
-
-read -p "[+] Enter the evidence folder path (press ENTER for current directory): " evidence_base_path
-[[ -z "$evidence_base_path" ]] && evidence_base_path="."
-evidence_folder=$(create_evidence_folder "$evidence_base_path")
-
-read -p "[+] Enter the symbols directory path (press ENTER to skip): " symbols_path
-[[ -z "$symbols_path" ]] && symbols_path="volatility3/symbols"
-
-read -p "[+] Select analysis type (1) Memory Dump (2) Live System: " analysis_choice
-case $analysis_choice in
-    1)
-        read -p "[+] Enter the memory dump path: " memory_dump_path
-        os_type=$(identify_os "dump" "$memory_dump_path")
-        run_volatility_commands "dump" "$evidence_folder" "$memory_dump_path" "$os_type" "$symbols_path"
-        ;;
-    2)
-        os_type=$(identify_os "live")
-        run_volatility_commands "live" "$evidence_folder" "" "$os_type" "$symbols_path"
-        ;;
-    *)
-        echo "[-] Invalid option."
+# Función para analizar un volcado de memoria
+analizar_volcado_memoria() {
+    read -p "Introduce la ruta completa del archivo de volcado de memoria: " memory_dump
+    if [ ! -f "$memory_dump" ]; then
+        log "${RED}El archivo no existe.${NC}"
         exit 1
-        ;;
-esac
+    fi
 
-echo "============================================================================"
-echo " Analysis completed. Results saved in: "
-echo "  $evidence_folder"
-echo "============================================================================"
+    # Detectar el sistema operativo del volcado de memoria
+    os_type=$(detectar_sistema_operativo "$memory_dump")
+    log "Sistema operativo detectado: ${GREEN}$os_type${NC}"
+
+    log "Analizando el volcado de memoria..."
+    if [[ "$os_type" == "Windows" ]]; then
+        plugins=(
+            "windows.info"
+            "windows.pslist"
+            "windows.psscan"
+            "windows.pstree"
+            "windows.dlllist"
+            "windows.handles"
+            "windows.netscan"
+            "windows.modules"
+            "windows.svcscan"
+            "windows.filescan"
+            "windows.registry.printkey"
+            "windows.malfind"
+            "windows.cmdline"
+        )
+    elif [[ "$os_type" == "Linux" ]]; then
+        plugins=(
+            "linux.info"
+            "linux.pslist"
+            "linux.psscan"
+            "linux.pstree"
+            "linux.dlllist"
+            "linux.handles"
+            "linux.netscan"
+            "linux.modules"
+            "linux.filescan"
+            "linux.bash"
+            "linux.check_syscall"
+        )
+    else
+        log "${RED}Sistema operativo no compatible.${NC}"
+        exit 1
+    fi
+
+    # Ejecutar todos los plugins
+    for plugin in "${plugins[@]}"; do
+        log "Ejecutando plugin: ${YELLOW}$plugin${NC}"
+        volatility -f "$memory_dump" "$plugin" > "$evidence_dir/memoria/${plugin//./_}.txt"
+        sleep "$pause_time"
+    done
+
+    log "${GREEN}Análisis completado. Los resultados se han guardado en $evidence_dir/memoria.${NC}"
+}
+
+# Función para analizar el sistema operativo en ejecución
+analizar_sistema_operativo() {
+    log "Analizando el sistema operativo en ejecución..."
+    os_type=$(uname -s)
+    if [[ "$os_type" == "Linux" ]]; then
+        log "Sistema operativo detectado: ${GREEN}Linux${NC}"
+        plugins=(
+            "linux.info"
+            "linux.pslist"
+            "linux.psscan"
+            "linux.pstree"
+            "linux.dlllist"
+            "linux.handles"
+            "linux.netscan"
+            "linux.modules"
+            "linux.filescan"
+            "linux.bash"
+            "linux.check_syscall"
+        )
+
+        # Ejecutar todos los plugins
+        for plugin in "${plugins[@]}"; do
+            log "Ejecutando plugin: ${YELLOW}$plugin${NC}"
+            volatility -f /proc/kcore "$plugin" > "$evidence_dir/sistema/${plugin//./_}.txt"
+            sleep "$pause_time"
+        done
+    elif [[ "$os_type" == "Windows" ]]; then
+        log "Sistema operativo detectado: ${GREEN}Windows${NC}"
+        log "${RED}No se puede analizar un sistema Windows en ejecución directamente. Use un volcado de memoria.${NC}"
+        exit 1
+    else
+        log "${RED}Sistema operativo no compatible.${NC}"
+        exit 1
+    fi
+
+    log "${GREEN}Análisis completado. Los resultados se han guardado en $evidence_dir/sistema.${NC}"
+}
+
+# Menú principal
+menu_principal() {
+    echo -e "${BLUE}Selecciona una opción:${NC}"
+    echo "1. Analizar un volcado de memoria existente"
+    echo "2. Analizar el sistema operativo en ejecución"
+    echo "3. Salir"
+    read -p "Opción: " option
+
+    case $option in
+        1)
+            analizar_volcado_memoria
+            ;;
+        2)
+            analizar_sistema_operativo
+            ;;
+        3)
+            log "Saliendo de Voldump."
+            exit 0
+            ;;
+        *)
+            log "${RED}Opción no válida.${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# Inicio del script
+verificar_dependencias
+menu_principal
