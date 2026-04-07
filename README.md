@@ -2,7 +2,6 @@
 
 VolDump es un frontend en Bash para automatizar análisis forenses de memoria con **Volatility 3**. Está pensado para ejecutarse en **Linux**, preparar el entorno si faltan dependencias y lanzar una batería de plugins útiles sobre volcados de memoria de **Windows o Linux**.
 
-![Pantalla principal de la herramienta](img/foto1.png)
 
 ## Qué hace
 
