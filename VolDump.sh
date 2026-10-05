@@ -472,7 +472,7 @@ ultima_linea_error() {
 }
 
 # Mata un proceso y todos sus descendientes.
-# shellcheck disable=SC2329  # se invoca desde el trap de interrupción
+# shellcheck disable=SC2317,SC2329  # se invoca desde el trap de interrupción
 matar_arbol() {
     local pid="$1" hijo
     for hijo in $(pgrep -P "${pid}" 2>/dev/null || true); do
@@ -481,7 +481,7 @@ matar_arbol() {
     kill -TERM "${pid}" 2>/dev/null || true
 }
 
-# shellcheck disable=SC2329  # se invoca desde el trap de interrupción
+# shellcheck disable=SC2317,SC2329  # se invoca desde el trap de interrupción
 detener_trabajos() {
     local pid
     for pid in $(jobs -pr); do
@@ -2351,7 +2351,7 @@ menu_principal() {
 # Señales y salida
 # ---------------------------------------------------------------------------
 
-# shellcheck disable=SC2329  # manejador de trap
+# shellcheck disable=SC2317,SC2329  # manejador de trap
 on_interrupt() {
     INTERRUPTED=true
     printf '\n' >&2
@@ -2360,7 +2360,7 @@ on_interrupt() {
     exit "${EXIT_INTERRUPTED}"
 }
 
-# shellcheck disable=SC2329  # manejador de trap
+# shellcheck disable=SC2317,SC2329  # manejador de trap
 on_exit() {
     local rc=$?
     set +o errexit
