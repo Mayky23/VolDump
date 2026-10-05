@@ -175,14 +175,6 @@ evidencias_20261005_163000/
 
 Cada resultado se llama `<plugin>.<motor>.<formato>`. El reporte incluye la información del caso (objetivo, tamaño, sistema detectado, versiones de Volatility, perfil, analista y comando), la verificación de integridad, una tabla con el estado y la duración de cada plugin, los errores con su causa y avisos con posibles soluciones (por ejemplo, símbolos que faltan).
 
-## Pruebas
-
-```bash
-bash tests/test_voldump.sh
-```
-
-Las pruebas usan versiones simuladas de Volatility 2 y 3 (`tests/fakes/`), así que no necesitan volcados reales. GitHub Actions ejecuta ShellCheck y las pruebas en cada push.
-
 ## Limitaciones
 
 - No reemplaza el análisis manual ni la interpretación forense de los resultados.
