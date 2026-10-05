@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: shellcheck VolDump.sh tests/test_voldump.sh tests/fakes/vol tests/fakes/vol2
+
+      - name: Pruebas
+        run: bash tests/test_voldump.sh

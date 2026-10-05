@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# Volatility 3 simulado para las pruebas de VolDump.
+#
+# Variables de control:
+#   FAKE_OS      windows (defecto), linux, mac o none
+#   FAKE_WIN     7 (defecto) o 10: versión de Windows que devuelve windows.info
+#   FAKE_FAIL    plugins que deben fallar, separados por comas
+#   FAKE_SLEEP   plugin:segundos para simular un plugin lento
+#   FAKE_OLD     1 para simular una versión antigua (sin windows.malware.*)
+#   FAKE_LOG     fichero donde se registra cada invocación
+
+printf 'vol3 %s\n' "$*" >>"${FAKE_LOG:-/dev/null}"
+
+plugins_disponibles() {
+    cat <<'LISTA'
+banners.Banners
+timeliner.Timeliner
+windows.info.Info
+windows.pslist.PsList
+windows.psscan.PsScan
+windows.pstree.PsTree
+windows.cmdline.CmdLine
+windows.envars.Envars
+windows.getsids.GetSIDs
+windows.privileges.Privs
+windows.cmdscan.CmdScan
+windows.consoles.Consoles
+windows.registry.userassist.UserAssist
+windows.shimcachemem.ShimcacheMem
+windows.registry.amcache.Amcache
+windows.dlllist.DllList
+windows.modules.Modules
+windows.modscan.ModScan
+windows.driverscan.DriverScan
+windows.netscan.NetScan
+windows.netstat.NetStat
+windows.filescan.FileScan
+windows.handles.Handles
+windows.mutantscan.MutantScan
+windows.registry.hivelist.HiveList
+windows.registry.printkey.PrintKey
+windows.svcscan.SvcScan
+windows.registry.scheduled_tasks.ScheduledTasks
+windows.ssdt.SSDT
+windows.callbacks.Callbacks
+linux.boottime.Boottime
+linux.pslist.PsList
+linux.psscan.PsScan
+linux.pstree.PsTree
+linux.psaux.PsAux
+linux.envars.Envars
+linux.bash.Bash
+linux.lsmod.Lsmod
+linux.sockstat.Sockstat
+linux.ip.Addr
+linux.lsof.Lsof
+linux.mountinfo.MountInfo
+linux.kmsg.Kmsg
+linux.malware.check_syscall.Check_syscall
+linux.malware.check_modules.Check_modules
+linux.malware.hidden_modules.Hidden_modules
+linux.malware.malfind.Malfind
+linux.malware.check_creds.Check_creds
+linux.malware.check_afinfo.Check_afinfo
+linux.malware.tty_check.Tty_Check
+linux.malware.netfilter.Netfilter
+linux.ebpf.EBPF
+LISTA
+    if [[ "${FAKE_OLD:-0}" == 1 ]]; then
+        printf '%s\n' windows.malfind.Malfind windows.psxview.PsXView windows.ldrmodules.LdrModules
+    else
+        printf '%s\n' windows.malware.malfind.Malfind windows.malware.psxview.PsXView \
+            windows.malware.ldrmodules.LdrModules windows.malware.hollowprocesses.HollowProcesses
+    fi
+}
+
+if [[ " $* " == *" -h "* ]]; then
+    echo "Volatility 3 Framework 2.28.2"
+    echo "usage: vol [-h] [-q] [-r RENDERER] [-f FILE] PLUGIN ..."
+    echo
+    echo "Plugins:"
+    while read -r plugin; do
+        printf '    %-40s Descripción de prueba\n' "${plugin}"
+    done < <(plugins_disponibles)
+    exit 0
+fi
+
+quiet=false
+renderer="quick"
+plugin=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -q) quiet=true; shift ;;
+        --offline) shift ;;
+        -r) renderer="$2"; shift 2 ;;
+        -f|-s) shift 2 ;;
+        *) plugin="$1"; shift; break ;;
+    esac
+done
+
+if [[ "${quiet}" == false ]]; then
+    echo "Progress: 100.00               PDB scanning finished" >&2
+fi
+if [[ "${renderer}" == quick ]]; then
+    echo "Volatility 3 Framework 2.28.2"
+else
+    echo "Volatility 3 Framework 2.28.2" >&2
+fi
+
+if [[ ",${FAKE_FAIL:-}," == *",${plugin},"* ]]; then
+    echo "Unsatisfied requirement plugins.Fake.kernel.symbol_table_name:" >&2
+    echo "Unable to validate the plugin requirements: ['plugins.Fake.kernel.symbol_table_name']" >&2
+    exit 1
+fi
+if [[ -n "${FAKE_SLEEP:-}" && "${FAKE_SLEEP%%:*}" == "${plugin}" ]]; then
+    sleep "${FAKE_SLEEP##*:}"
+fi
+
+os="${FAKE_OS:-windows}"
+case "${plugin}" in
+    windows.info)
+        if [[ "${os}" != windows ]]; then
+            echo "Unable to validate the plugin requirements: ['plugins.Info.kernel.layer_name']" >&2
+            exit 1
+        fi
+        if [[ "${FAKE_WIN:-7}" == 10 ]]; then
+            printf 'Variable\tValue\n\nKernel Base\t0xf80361c00000\nIs64Bit\tTrue\nNTBuildLab\t19041.1.amd64fre.vb_release.191206-1406\nCSDVersion\t0\nMajor/Minor\t15.19045\nSystemTime\t2026-01-01 10:00:00+00:00\nNtProductType\tNtProductWinNt\nNtMajorVersion\t10\nNtMinorVersion\t0\n'
+        else
+            printf 'Variable\tValue\n\nKernel Base\t0xf80002a0f000\nIs64Bit\tTrue\nNTBuildLab\t7601.17514.amd64fre.win7sp1_rtm.\nCSDVersion\t1\nMajor/Minor\t15.7601\nSystemTime\t2026-01-01 10:00:00+00:00\nNtProductType\tNtProductWinNt\nNtMajorVersion\t6\nNtMinorVersion\t1\n'
+        fi
+        ;;
+    banners.Banners)
+        printf 'Offset\tBanner\n\n'
+        case "${os}" in
+            linux) printf '0x1000\tLinux version 5.15.0-91-generic (buildd@lcy02-amd64-045) #101-Ubuntu SMP\n' ;;
+            mac) printf '0x2000\tDarwin Kernel Version 19.6.0: Thu Jun 18 20:49:00 PDT 2020\n' ;;
+        esac
+        ;;
+    windows.*|linux.*|mac.*|timeliner.*)
+        if [[ "${plugin}" != timeliner.* && "${plugin%%.*}" != "${os}" ]]; then
+            echo "Unable to validate the plugin requirements" >&2
+            exit 1
+        fi
+        if [[ "${renderer}" == json ]]; then
+            echo "[]"
+        else
+            printf 'PID\tNombre\n4\tSystem\n# %s %s\n' "${plugin}" "$*"
+        fi
+        ;;
+    *)
+        echo "vol: error: argument PLUGIN: invalid choice ${plugin}" >&2
+        exit 2
+        ;;
+esac
